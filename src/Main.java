@@ -1,5 +1,6 @@
 import com.raylib.Jaylib;
 import com.raylib.Raylib;
+import java.lang.Math;
 
 import java.io.File;
 import java.util.Arrays;
@@ -69,10 +70,12 @@ class Main{
         boolean pause = true;
         boolean pausePressed = false;
         boolean mediaStepPressed = false;
+        boolean select = false;
+        int selectIndex = 0;
+        int currentSelectSong = currentSong;
         Raylib.Vector2 mousePoint = new Jaylib.Vector2(0.0f, 0.0f);
 
         float scrollingOffset = -currentSong*AfacadMediumFont.baseSize()*1.5f;
-
         PlayMusicStream(music);
         PauseMusicStream(music);
 
@@ -80,13 +83,16 @@ class Main{
         while (!WindowShouldClose()) {
             sliderColor = BLACK;
             seekTime = "";
+            currentSelectSong = (int) ((int) -scrollingOffset/(AfacadMediumFont.baseSize()*1.5f));
+            Raylib.Rectangle SongQueueBounds = new Jaylib.Rectangle(2.0f * screenWidth / 3, screenHeight / 2.0f - AfacadMediumFont.baseSize() + scrollingOffset, (float) screenWidth /3, songNames.length*1.4f*AfacadMediumFont.baseSize());
 
             musicTotalTime = String.format("%d:%02d", (int) GetMusicTimeLength(music) / 60, (int) GetMusicTimeLength(music) % 60);
             musicCurrentTime = String.format("%d:%02d", (int) GetMusicTimePlayed(music) / 60, (int) GetMusicTimePlayed(music) % 60);
             UpdateMusicStream(music);
             mousePoint = GetMousePosition();
 
-            // Select song to play
+
+            // Select song to play using keyboard
             if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
                 StopMusicStream(music);
                 currentSong = (int) ((int) -scrollingOffset/(AfacadMediumFont.baseSize()*1.5f));
@@ -234,6 +240,19 @@ class Main{
                 scrollingOffset += AfacadMediumFont.baseSize() * 1.5f;
             }
 
+            // Song selection using click
+            if(CheckCollisionPointRec(mousePoint, SongQueueBounds)){
+                SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+                selectIndex = (int)Math.ceil((screenHeight / 2.0f - AfacadMediumFont.baseSize() - mousePoint.y())/(1.5f*AfacadMediumFont.baseSize()));
+                if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) || select) {
+                    if(IsGestureDetected(GESTURE_TAP)) select = false;
+                } else {
+                    scrollingOffset += selectIndex*1.5f*AfacadMediumFont.baseSize();
+                    select = true;
+                }
+            } else {
+                SetMouseCursor(MOUSE_CURSOR_ARROW);
+            }
             // Check for Scroll Bounds
             float maxScroll = (songNames.length - 1) * 1.5f * AfacadMediumFont.baseSize();
             if (scrollingOffset > 0) {
@@ -274,7 +293,11 @@ class Main{
                 if (pos.y() == screenHeight / 2 - AfacadMediumFont.baseSize()) {
                     DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x() - 20, (int) pos.y(), 30, BLACK);
                 } else {
-                    DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x(), (int) pos.y(), 30, LIGHTGRAY);
+                    if(i == (currentSelectSong - selectIndex)) {
+                        DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x(), (int) pos.y(), 30, GRAY);
+                    } else {
+                        DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x(), (int) pos.y(), 30, LIGHTGRAY);
+                    }
                 }
             }
 
