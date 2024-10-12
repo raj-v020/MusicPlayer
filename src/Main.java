@@ -119,7 +119,7 @@ class Main{
             if (CheckCollisionPointRec(mousePoint, musicSliderBounds)) {
                 float seekTimeInSecs = GetMusicTimeLength(music) * (mousePoint.x() - musicSliderBounds.x()) / musicSliderBounds.width();
                 seekTime = String.format("%d:%02d", (int) seekTimeInSecs / 60, (int) seekTimeInSecs % 60);
-
+                HideCursor();
                 sliderColor = MAROON;
                 if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
                     PauseMusicStream(music);
@@ -132,6 +132,8 @@ class Main{
                         ResumeMusicStream(music);
                     }
                 }
+            } else {
+                ShowCursor();
             }
 
             // Pause and Play using buttons
@@ -208,16 +210,7 @@ class Main{
             // Skip Playing before or after
             if(IsKeyPressedRepeat(KEY_RIGHT) || IsKeyPressedRepeat(KEY_L) || IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_L)){
                 float seekMusicTime = GetMusicTimePlayed(music) + 5;
-                if(seekMusicTime < 0){
-                    StopMusicStream(music);
-                    currentSong = (currentSong - 1)%songNames.length;
-                    currentSong = currentSong < 0 ? songNames.length+currentSong : currentSong;
-                    musicName = songNames[currentSong];
-                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
-                    PlayMusicStream(music);
-                    scrollingOffset += AfacadMediumFont.baseSize() * 1.5f;
-                    pause = false;
-                } else if (seekMusicTime > GetMusicTimeLength(music)) {
+                if (seekMusicTime > GetMusicTimeLength(music)) {
                     StopMusicStream(music);
                     currentSong = (currentSong + 1)%songNames.length;
                     musicName = songNames[currentSong];
@@ -239,30 +232,9 @@ class Main{
                     PlayMusicStream(music);
                     scrollingOffset += AfacadMediumFont.baseSize() * 1.5f;
                     pause = false;
-                } else if (seekMusicTime > GetMusicTimeLength(music)) {
-                    StopMusicStream(music);
-                    currentSong = (currentSong + 1)%songNames.length;
-                    musicName = songNames[currentSong];
-                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
-                    PlayMusicStream(music);
-                    scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
-                    pause = false;
                 } else {
                     SeekMusicStream(music, seekMusicTime);
                 }
-            }
-            timePlayed = GetMusicTimePlayed(music) / GetMusicTimeLength(music);
-
-            if(timePlayed > 1.0f) timePlayed = 1.0f;
-            // Next song when current song Ends
-            if (musicCurrentTime.equals(musicTotalTime)){
-                StopMusicStream(music);
-                currentSong = (currentSong + 1)%songNames.length;
-                musicName = songNames[currentSong];
-                music = LoadMusicStream(songsFolderPath + "/" + musicName);
-                PlayMusicStream(music);
-                scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
-                pause = false;
             }
 
             // Scrolling State
@@ -308,6 +280,21 @@ class Main{
                 }
             }
 
+            // Next song when current song Ends
+            if (musicCurrentTime.equals(musicTotalTime)){
+                StopMusicStream(music);
+                currentSong = (currentSong + 1)%songNames.length;
+                musicName = songNames[currentSong];
+                music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                PlayMusicStream(music);
+                scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
+                pause = false;
+            }
+
+            timePlayed = GetMusicTimePlayed(music) / GetMusicTimeLength(music);
+
+            if(timePlayed > 1.0f) timePlayed = 1.0f;
+
             BeginDrawing();
             ClearBackground(RAYWHITE);
             DrawText(musicName.substring(0, musicName.indexOf(".")), 30, 30 , 30, MAROON);
@@ -319,6 +306,11 @@ class Main{
             if (!seekTime.isEmpty()) {
                 mousePoint.y((int) musicSliderRec.height() - 36);
                 DrawTextEx(AfacadMediumFont, seekTime, mousePoint, 20, 1, MAROON);
+                if(seekTime.compareTo(musicCurrentTime) > 0) {
+                    DrawLine((int) mousePoint.x(), (int) musicSliderRec.y(), (int) mousePoint.x(), (int) musicSliderRec.height(), MAROON);
+                } else {
+                    DrawLine((int) mousePoint.x(), (int) musicSliderRec.y(), (int) mousePoint.x(), (int) musicSliderRec.height(), LIGHTGRAY );
+                }
             }
             DrawTextEx(AfacadMediumFont, musicCurrentTime, CurrentTimePos, 20, 1, BLACK);
             DrawTextEx(AfacadMediumFont, musicTotalTime, TotalTimePos, 20, 1, BLACK);
