@@ -71,6 +71,7 @@ class Main{
         boolean pausePressed = false;
         boolean mediaStepPressed = false;
         boolean select = false;
+        boolean SongQueueHover = false;
         int selectIndex = 0;
         int currentSelectSong = currentSong;
         Raylib.Vector2 mousePoint = new Jaylib.Vector2(0.0f, 0.0f);
@@ -83,14 +84,13 @@ class Main{
         while (!WindowShouldClose()) {
             sliderColor = BLACK;
             seekTime = "";
-            currentSelectSong = (int) ((int) -scrollingOffset/(AfacadMediumFont.baseSize()*1.5f));
             Raylib.Rectangle SongQueueBounds = new Jaylib.Rectangle(2.0f * screenWidth / 3, screenHeight / 2.0f - AfacadMediumFont.baseSize() + scrollingOffset, (float) screenWidth /3, songNames.length*1.4f*AfacadMediumFont.baseSize());
+            currentSelectSong = (int) ((int) -scrollingOffset/(AfacadMediumFont.baseSize()*1.5f));
 
             musicTotalTime = String.format("%d:%02d", (int) GetMusicTimeLength(music) / 60, (int) GetMusicTimeLength(music) % 60);
             musicCurrentTime = String.format("%d:%02d", (int) GetMusicTimePlayed(music) / 60, (int) GetMusicTimePlayed(music) % 60);
             UpdateMusicStream(music);
             mousePoint = GetMousePosition();
-
 
             // Select song to play using keyboard
             if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
@@ -206,28 +206,64 @@ class Main{
             }
 
             // Skip Playing before or after
-            if(IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_L)){
+            if(IsKeyPressedRepeat(KEY_RIGHT) || IsKeyPressedRepeat(KEY_L) || IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_L)){
                 float seekMusicTime = GetMusicTimePlayed(music) + 5;
                 if(seekMusicTime < 0){
-                    SeekMusicStream(music, 0.1f);
+                    StopMusicStream(music);
+                    currentSong = (currentSong - 1)%songNames.length;
+                    currentSong = currentSong < 0 ? songNames.length+currentSong : currentSong;
+                    musicName = songNames[currentSong];
+                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                    PlayMusicStream(music);
+                    scrollingOffset += AfacadMediumFont.baseSize() * 1.5f;
+                    pause = false;
                 } else if (seekMusicTime > GetMusicTimeLength(music)) {
-                    SeekMusicStream(music, GetMusicTimeLength(music));
+                    StopMusicStream(music);
+                    currentSong = (currentSong + 1)%songNames.length;
+                    musicName = songNames[currentSong];
+                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                    PlayMusicStream(music);
+                    scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
+                    pause = false;
                 } else {
                     SeekMusicStream(music, seekMusicTime);
                 }
-            } else if(IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_H)){
+            } else if(IsKeyPressedRepeat(KEY_LEFT) || IsKeyPressedRepeat(KEY_H) || IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_H)){
                 float seekMusicTime = GetMusicTimePlayed(music) - 5;
                 if(seekMusicTime < 0){
-                    SeekMusicStream(music, 0);
+                    StopMusicStream(music);
+                    currentSong = (currentSong - 1)%songNames.length;
+                    currentSong = currentSong < 0 ? songNames.length+currentSong : currentSong;
+                    musicName = songNames[currentSong];
+                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                    PlayMusicStream(music);
+                    scrollingOffset += AfacadMediumFont.baseSize() * 1.5f;
+                    pause = false;
                 } else if (seekMusicTime > GetMusicTimeLength(music)) {
-                    SeekMusicStream(music, GetMusicTimeLength(music));
+                    StopMusicStream(music);
+                    currentSong = (currentSong + 1)%songNames.length;
+                    musicName = songNames[currentSong];
+                    music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                    PlayMusicStream(music);
+                    scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
+                    pause = false;
                 } else {
                     SeekMusicStream(music, seekMusicTime);
                 }
             }
             timePlayed = GetMusicTimePlayed(music) / GetMusicTimeLength(music);
 
-            if (timePlayed > 1.0f) timePlayed = 1.0f;
+            if(timePlayed > 1.0f) timePlayed = 1.0f;
+            // Next song when current song Ends
+            if (musicCurrentTime.equals(musicTotalTime)){
+                StopMusicStream(music);
+                currentSong = (currentSong + 1)%songNames.length;
+                musicName = songNames[currentSong];
+                music = LoadMusicStream(songsFolderPath + "/" + musicName);
+                PlayMusicStream(music);
+                scrollingOffset -= AfacadMediumFont.baseSize() * 1.5f;
+                pause = false;
+            }
 
             // Scrolling State
             float oldScrollOffset = scrollingOffset;
@@ -242,6 +278,7 @@ class Main{
 
             // Song selection using click
             if(CheckCollisionPointRec(mousePoint, SongQueueBounds)){
+                SongQueueHover = true;
                 SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
                 selectIndex = (int)Math.ceil((screenHeight / 2.0f - AfacadMediumFont.baseSize() - mousePoint.y())/(1.5f*AfacadMediumFont.baseSize()));
                 if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) || select) {
@@ -251,6 +288,8 @@ class Main{
                     select = true;
                 }
             } else {
+                SongQueueHover = false;
+                currentSelectSong = 0;
                 SetMouseCursor(MOUSE_CURSOR_ARROW);
             }
             // Check for Scroll Bounds
@@ -293,7 +332,7 @@ class Main{
                 if (pos.y() == screenHeight / 2 - AfacadMediumFont.baseSize()) {
                     DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x() - 20, (int) pos.y(), 30, BLACK);
                 } else {
-                    if(i == (currentSelectSong - selectIndex)) {
+                    if(i == (currentSelectSong - selectIndex) && SongQueueHover) {
                         DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x(), (int) pos.y(), 30, GRAY);
                     } else {
                         DrawText(songNames[i].substring(0, songNames[i].indexOf(".")), (int) pos.x(), (int) pos.y(), 30, LIGHTGRAY);
